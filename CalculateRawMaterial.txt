@@ -1,0 +1,39 @@
+        public int CalculateRawMaterial(int productTypeId, int materialTypeId, int quantity, double param1, double param2)
+        {
+            // Валидация входных данных. Если данные некорректны, возвращаем -1.
+            if (quantity <= 0 || param1 <= 0 || param2 <= 0)
+                return -1;
+
+            double productCoefficient = 0;
+            double lossPercent = 0;
+
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT Coefficient FROM ProductTypes WHERE Id = @id", connection))
+                {
+                    cmd.Parameters.AddWithValue("@id", productTypeId);
+                    object result = cmd.ExecuteScalar();
+                    if (result == null) return -1; // Тип продукции не найден
+                    productCoefficient = Convert.ToDouble(result);
+                }
+
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT LossPercent FROM MaterialTypes WHERE Id = @id", connection))
+                {
+                    cmd.Parameters.AddWithValue("@id", materialTypeId);
+                    object result = cmd.ExecuteScalar();
+                    if (result == null) return -1; // Тип материала не найден
+                    lossPercent = Convert.ToDouble(result);
+                }
+            }
+
+            // Расчет: объем * коэфф.типа * (1 + процент потерь)
+            double rawPerUnit = param1 * param2 * productCoefficient;
+            double totalRaw = rawPerUnit * quantity;
+            double totalWithLoss = totalRaw * (1 + lossPercent);
+
+            return (int)Math.Ceiling(totalWithLoss);
+        }
+    }
+}
